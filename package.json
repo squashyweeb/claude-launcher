@@ -1,0 +1,25 @@
+{
+  "name": "claude-launcher",
+  "version": "0.1.0",
+  "description": "Side-by-side launcher for multiple Claude Desktop accounts on Windows",
+  "main": "main.js",
+  "license": "MIT",
+  "keywords": [
+    "claude",
+    "claude-desktop",
+    "launcher",
+    "multi-account",
+    "electron",
+    "windows"
+  ],
+  "scripts": {
+    "start": "electron .",
+    "pack": "electron-packager . ClaudeLauncher --platform=win32 --arch=x64 --overwrite --out=dist --ignore=\"node_modules/electron-packager\"",
+    "lint": "echo \"(no linter configured)\" && exit 0",
+    "check-pii": "node scripts/check-pii.js"
+  },
+  "devDependencies": {
+    "electron": "^32.2.0",
+    "electron-packager": "^17.1.2"
+  }
+}
