@@ -19,7 +19,7 @@
     "check-pii": "node scripts/check-pii.js"
   },
   "devDependencies": {
-    "electron": "^32.2.0",
+    "electron": "^45.2.3",
     "electron-packager": "^17.1.2"
   }
 }
