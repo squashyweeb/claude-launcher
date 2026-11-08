@@ -87,7 +87,7 @@ jobs:
           if (-not $exe) { throw 'ClaudeLauncher.exe not produced' }
           Write-Host "Built: $($exe.FullName) ($([math]::Round($exe.Length / 1MB, 1)) MB)"
       - name: Upload built app
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: claude-launcher-win32-x64
           path: dist/ClaudeLauncher-win32-x64
