@@ -14,12 +14,50 @@
   ],
   "scripts": {
     "start": "electron .",
-    "pack": "electron-packager . ClaudeLauncher --platform=win32 --arch=x64 --overwrite --out=dist --ignore=\"node_modules/electron-packager\"",
+    "pack": "electron-builder --win portable --publish never",
+    "pack:folder": "electron-packager . ClaudeLauncher --platform=win32 --arch=x64 --overwrite --out=dist --ignore=\"node_modules/electron-packager\"",
     "lint": "echo \"(no linter configured)\" && exit 0",
     "check-pii": "node scripts/check-pii.js"
   },
+  "build": {
+    "appId": "com.squashyweeb.claude-launcher",
+    "productName": "ClaudeLauncher",
+    "copyright": "Copyright (c) 2026 claude-launcher contributors",
+    "directories": {
+      "output": "dist"
+    },
+    "files": [
+      "main.js",
+      "preload.js",
+      "renderer.js",
+      "index.html",
+      "styles.css",
+      "LICENSE",
+      "NOTICE",
+      "TRADEMARKS.md",
+      "README.md",
+      "profiles.example.json",
+      "prefs.example.json",
+      "config.example.json",
+      "docs/**/*",
+      "scripts/**/*",
+      "shim/**/*",
+      "legacy/**/*",
+      "!**/*.bak*",
+      "!**/debug.log",
+      "!**/.gitignore"
+    ],
+    "win": {
+      "target": "portable",
+      "artifactName": "ClaudeLauncher-${version}.exe"
+    },
+    "portable": {
+      "artifactName": "ClaudeLauncher-${version}.exe"
+    }
+  },
   "devDependencies": {
     "electron": "^32.2.0",
+    "electron-builder": "^25.1.8",
     "electron-packager": "^17.1.2"
   }
 }
