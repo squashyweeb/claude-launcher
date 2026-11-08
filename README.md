@@ -14,7 +14,7 @@ Desktop put them — nothing is copied, nothing is forwarded, no telemetry.
 ![License: MIT](https://img.shields.io/badge/license-MIT-blue.svg)
 ![Platform: Windows](https://img.shields.io/badge/platform-Windows%2010%2F11-informational)
 
-![Two Claude Desktop accounts running side-by-side on Windows — launcher card picker with three profiles visible](docs/images/hero.svg)
+![Claude Launcher — opening two Claude Desktop accounts side-by-side on Windows](docs/images/hero.gif)
 
 > If Claude Launcher saves you the sign-out / sign-in dance, give it a star —
 > it helps other people find it.
