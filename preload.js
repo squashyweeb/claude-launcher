@@ -1,6 +1,6 @@
 'use strict';
 
-const { contextBridge, ipcRenderer, shell } = require('electron');
+const { contextBridge, ipcRenderer } = require('electron');
 
 contextBridge.exposeInMainWorld('api', {
   loadProfiles: () => ipcRenderer.invoke('profiles:load'),
@@ -23,6 +23,11 @@ contextBridge.exposeInMainWorld('api', {
     const handler = (_e, id) => cb(id);
     ipcRenderer.on('context-menu:click', handler);
     return () => ipcRenderer.removeListener('context-menu:click', handler);
+  },
+  onLaunchError: (cb) => {
+    const handler = (_e, payload) => cb(payload);
+    ipcRenderer.on('launch-error', handler);
+    return () => ipcRenderer.removeListener('launch-error', handler);
   },
 
   window: {

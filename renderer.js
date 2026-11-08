@@ -202,22 +202,55 @@ function updateAllCardStatus() {
 async function doLaunch(idx) {
   const p = state.profiles[idx];
   if (!p) return;
-  await window.api.launch(p);
-  state.prefs.launchCounts = state.prefs.launchCounts || {};
-  state.prefs.launchCounts[p.Id] = (state.prefs.launchCounts[p.Id] || 0) + 1;
-  window.api.savePrefs(state.prefs);
-  setTimeout(refresh, 500);
+  const card = document.querySelector(`.card[data-idx="${idx}"]`);
+  const btn = card && card.querySelector('.btn-launch');
+  if (btn) btn.disabled = true;
+  try {
+    const result = await window.api.launch(p);
+    if (result && result.ok === false) {
+      window.api.messageBox({ type: 'error', title: 'Launch failed',
+        message: `Could not launch ${p.Name}`, detail: result.error || 'unknown error' });
+    }
+    state.prefs.launchCounts = state.prefs.launchCounts || {};
+    state.prefs.launchCounts[p.Id] = (state.prefs.launchCounts[p.Id] || 0) + 1;
+    window.api.savePrefs(state.prefs);
+  } finally {
+    if (btn) btn.disabled = false;
+    setTimeout(refresh, 500);
+  }
 }
 async function doClose(idx) {
   const p = state.profiles[idx];
   if (!p) return;
-  await window.api.close(p.Dir);
-  setTimeout(refresh, 400);
+  const card = document.querySelector(`.card[data-idx="${idx}"]`);
+  const btn = card && card.querySelector('.btn-close');
+  if (btn) btn.disabled = true;
+  try {
+    await window.api.close(p.Dir);
+  } finally {
+    if (btn) btn.disabled = false;
+    setTimeout(refresh, 400);
+  }
 }
 
+let refreshSeq = 0;
 async function refresh() {
-  state.running = await window.api.getRunning();
-  updateAllCardStatus();
+  const mine = ++refreshSeq;
+  let next;
+  try { next = await window.api.getRunning(); }
+  catch (e) {
+    // Keep the previous snapshot instead of strobing every card to
+    // "Not running" when WMI stalls under load.
+    console.warn('getRunning failed, keeping stale state:', e && e.message);
+    return;
+  }
+  // Drop stale responses: an older in-flight refresh must not overwrite
+  // a newer one that already landed.
+  if (mine !== refreshSeq) return;
+  if (next && typeof next === 'object') {
+    state.running = next;
+    updateAllCardStatus();
+  }
 }
 
 // -----------------------------------------------------------------------------
@@ -255,9 +288,15 @@ function showCardMenu(idx) {
 
 async function duplicateProfile(idx) {
   const src = state.profiles[idx];
+  // Force the copy to be a NEW standalone profile dir, not a shared Dir
+  // with the original. Otherwise Close on either kills both; and if the
+  // user hits Cancel in the Edit modal, two cards silently share state.
   const copy = { ...src };
-  copy.Id = `${src.Id}-copy-${Math.floor(Math.random()*900+100)}`;
+  const stamp = Math.floor(Math.random() * 9000 + 1000);
+  copy.Id = `${src.Id || 'acct'}-copy-${stamp}`;
   copy.Name = `${src.Name} (copy)`;
+  copy.Mode = 'profile';
+  copy.Dir = `${state.env.profilesBase}\\${copy.Id}`;
   state.profiles.splice(idx + 1, 0, copy);
   await window.api.saveProfiles(state.profiles);
   renderCards();
@@ -434,6 +473,17 @@ async function saveModal() {
     d.Dir = dir;
   }
 
+  // Reject duplicate Dir: two cards sharing a path means Close/status gets
+  // attributed to the wrong card and Close on one kills the other.
+  const dirKey = d.Dir.replace(/\\+$/, '').toLowerCase();
+  const collision = state.profiles.findIndex((p, i) =>
+    i !== state.modal.replaceIdx && (p.Dir || '').replace(/\\+$/, '').toLowerCase() === dirKey);
+  if (collision !== -1) {
+    document.getElementById('validation').textContent =
+      `That folder is already used by "${state.profiles[collision].Name}". Pick a different key/folder.`;
+    return;
+  }
+
   if (state.modal.isEdit && state.modal.replaceIdx >= 0) {
     state.profiles[state.modal.replaceIdx] = d;
   } else {
@@ -448,15 +498,15 @@ async function saveModal() {
 // -----------------------------------------------------------------------------
 // Hint strip
 // -----------------------------------------------------------------------------
+// In-memory rotation only; no disk write every 10s.
+let _hintCursor = 0;
 function showNextHint() {
   if (!state.prefs.hintsEnabled) {
     document.getElementById('hint-strip').hidden = true;
     return;
   }
-  const i = (state.prefs.hintIndex || 0) % HINTS.length;
-  document.getElementById('hint-text').textContent = HINTS[i];
-  state.prefs.hintIndex = (i + 1) % HINTS.length;
-  window.api.savePrefs(state.prefs);
+  document.getElementById('hint-text').textContent = HINTS[_hintCursor % HINTS.length];
+  _hintCursor++;
 }
 
 // -----------------------------------------------------------------------------
@@ -469,7 +519,11 @@ document.addEventListener('keydown', (e) => {
 
   if (e.key === 'Escape') {
     if (!document.getElementById('modal-root').hidden) { closeModal(); e.preventDefault(); return; }
-    if (!document.getElementById('help-modal').hidden) { document.getElementById('help-modal').hidden = true; return; }
+    if (!document.getElementById('help-modal').hidden) { document.getElementById('help-modal').hidden = true; e.preventDefault(); return; }
+    // No modal open -> Esc closes the launcher (README promises this).
+    window.api.window.close();
+    e.preventDefault();
+    return;
   }
   if (e.key === 'F1') { showHelp(); e.preventDefault(); return; }
   const ctrl  = e.ctrlKey;
@@ -490,16 +544,21 @@ document.addEventListener('keydown', (e) => {
 });
 
 async function launchAll() {
-  for (const p of state.profiles) {
-    await window.api.launch(p);
-    await new Promise(r => setTimeout(r, 400));
+  // Fire launches concurrently; each spawn is sub-50ms, no need to stagger.
+  const results = await Promise.allSettled(
+    state.profiles.map(p => window.api.launch(p).then(r => ({ p, r })))
+  );
+  for (const res of results) {
+    if (res.status === 'fulfilled' && res.value.r && res.value.r.ok === false) {
+      console.warn('launch failed for', res.value.p.Name, res.value.r.error);
+    }
   }
-  refresh();
+  setTimeout(refresh, 500);
 }
+
 async function closeAll() {
-  for (const p of state.profiles) {
-    await window.api.close(p.Dir);
-  }
+  // Concurrent closes; closeByDir in main spawns its own PowerShell per call.
+  await Promise.allSettled(state.profiles.map(p => window.api.close(p.Dir)));
   setTimeout(refresh, 400);
 }
 
@@ -529,8 +588,22 @@ async function boot() {
   await refresh();
   showNextHint();
 
-  setInterval(refresh, 2000);
+  // Self-scheduling chain: next tick starts AFTER the previous refresh
+  // settles. Prevents pile-up when WMI stalls under AV / resume-from-sleep.
+  (async function refreshLoop() {
+    try { await refresh(); } finally { setTimeout(refreshLoop, 2000); }
+  })();
   setInterval(showNextHint, 10000);
+
+  // Launch-error listener (main.js emits via webContents.send when spawn errors)
+  if (window.api.onLaunchError) {
+    window.api.onLaunchError(({ dir, error }) => {
+      const p = state.profiles.find(x => x.Dir === dir);
+      window.api.messageBox({ type: 'error', title: 'Launch failed',
+        message: p ? `Could not launch ${p.Name}` : 'Could not launch',
+        detail: error });
+    });
+  }
 
   // Window chrome
   document.getElementById('tb-min').onclick = () => window.api.window.minimize();
