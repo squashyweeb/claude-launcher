@@ -27,7 +27,7 @@ jobs:
           "$h  $out" | Out-File -FilePath "$out.sha256" -Encoding ASCII
           Write-Host "Built $out ($h)"
       - name: Create GitHub Release
-        uses: softprops/action-gh-release@v2
+        uses: softprops/action-gh-release@v3
         with:
           files: |
             ClaudeLauncher-${{ github.ref_name }}-win32-x64.zip
