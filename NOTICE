@@ -1,0 +1,61 @@
+claude-launcher
+Copyright (c) 2026 claude-launcher contributors
+
+This project is an INDEPENDENT, UNOFFICIAL utility. It is not affiliated
+with, endorsed by, or sponsored by Anthropic PBC.
+
+"Claude" and "Claude Desktop" are trademarks of Anthropic PBC. This project
+uses these names solely in a descriptive sense to indicate interoperation
+with Anthropic's Claude Desktop application. All trademarks remain the
+property of their respective owners.
+
+------------------------------------------------------------------------
+Scope and architecture
+------------------------------------------------------------------------
+
+This repository does NOT include, redistribute, modify, or derive any part
+of Anthropic's proprietary Claude Desktop binary or source code. The
+launcher operates by invoking a user's existing, independently obtained
+Claude Desktop installation via standard command-line arguments
+(--user-data-dir and --profile) that are features of the underlying
+Chromium / Electron runtime, not Anthropic-specific APIs.
+
+The optional profile shim under `shim/` is an original work by this
+project's contributors that an END USER may elect to install into their
+own copy of Claude Desktop on their own machine. The shim's source is
+MIT-licensed and contains no Anthropic code.
+
+------------------------------------------------------------------------
+Third-party components
+------------------------------------------------------------------------
+
+This project uses the following third-party components, each under its
+own license:
+
+- Electron
+    License: MIT
+    https://github.com/electron/electron
+- Node.js standard library
+    License: MIT
+    https://github.com/nodejs/node
+
+Optional Python helper (`scripts/whois.py`):
+- pywin32
+    License: Python Software Foundation License
+    https://github.com/mhammond/pywin32
+- pycryptodome
+    License: Public Domain / BSD-2-Clause
+    https://github.com/Legrandin/pycryptodome
+
+------------------------------------------------------------------------
+Security scope
+------------------------------------------------------------------------
+
+- The launcher reads and writes only files inside its own installation
+  directory, plus the user-chosen Claude Desktop profile directories.
+- The optional "Who is signed in?" feature performs ONE HTTPS request to
+  `api.anthropic.com/api/oauth/profile` using the local user's own,
+  already-signed-in OAuth access token, and shows the response in the
+  UI. No token, email, or other identifying data is ever sent to any
+  other host.
+- See SECURITY.md for how to report vulnerabilities.

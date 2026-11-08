@@ -1,0 +1,20 @@
+[
+  {
+    "Id": "account-a",
+    "Name": "Account A",
+    "Email": "user-a@example.com",
+    "Plan": "Max 20x",
+    "Accent": "#ef4444",
+    "Dir": "%LOCALAPPDATA%\\Claude-Data-Profiles\\account-a",
+    "Mode": "profile"
+  },
+  {
+    "Id": "account-b",
+    "Name": "Account B",
+    "Email": "user-b@example.com",
+    "Plan": "Max 5x",
+    "Accent": "#3b82f6",
+    "Dir": "%APPDATA%\\Claude",
+    "Mode": "user-data-dir"
+  }
+]

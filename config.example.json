@@ -1,0 +1,4 @@
+{
+  "_comment": "This file is optional. The launcher writes it automatically when you pick a Claude.exe through the UI. Delete it to re-trigger auto-detection.",
+  "exePath": "C:\\Users\\<you>\\AppData\\Local\\Programs\\Claude\\Claude.exe"
+}

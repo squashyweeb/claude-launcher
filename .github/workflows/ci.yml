@@ -1,0 +1,94 @@
+name: CI
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+permissions:
+  contents: read
+
+jobs:
+  pii-scan:
+    name: PII sentinel scan
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with: { fetch-depth: 0 }
+      - uses: actions/setup-node@v4
+        with: { node-version: '20' }
+      - name: Run check-pii
+        run: node scripts/check-pii.js
+
+  gitleaks:
+    name: gitleaks secret scan
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with: { fetch-depth: 0 }
+      - uses: gitleaks/gitleaks-action@v2
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GITLEAKS_ENABLE_UPLOAD_ARTIFACT: false
+
+  lint-js:
+    name: JS lint (syntax check)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with: { node-version: '20' }
+      - run: node --check main.js
+      - run: node --check preload.js
+      - run: node --check renderer.js
+      - run: node --check scripts/check-pii.js
+      - run: npm run lint --if-present
+
+  pwsh-check:
+    name: PowerShell parse check
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Parse legacy launcher
+        shell: pwsh
+        run: |
+          $errors = $null
+          [void][System.Management.Automation.Language.Parser]::ParseFile(
+            "legacy/launcher.ps1", [ref]$null, [ref]$errors
+          )
+          if ($errors.Count -gt 0) {
+            $errors | ForEach-Object { Write-Error $_ }
+            exit 1
+          }
+
+  python-check:
+    name: Python syntax check
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with: { python-version: '3.12' }
+      - run: python -m py_compile scripts/whois.py
+
+  electron-build:
+    name: Electron packager build (smoke)
+    runs-on: windows-latest
+    needs: [pii-scan, gitleaks, lint-js]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with: { node-version: '20' }
+      - run: npm ci
+      - run: npm run pack
+      - name: Verify output exists
+        shell: pwsh
+        run: |
+          $exe = Get-ChildItem dist -Recurse -Filter ClaudeLauncher.exe | Select-Object -First 1
+          if (-not $exe) { throw 'ClaudeLauncher.exe not produced' }
+          Write-Host "Built: $($exe.FullName) ($([math]::Round($exe.Length / 1MB, 1)) MB)"
+      - name: Upload built app
+        uses: actions/upload-artifact@v4
+        with:
+          name: claude-launcher-win32-x64
+          path: dist/ClaudeLauncher-win32-x64
+          retention-days: 7
