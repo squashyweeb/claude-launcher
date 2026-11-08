@@ -30,7 +30,10 @@ const PATTERNS = [
   { name: 'anthropic-access-token', re: /sk-ant-oat01-[A-Za-z0-9_-]{30,}/ },
   { name: 'anthropic-refresh-token', re: /sk-ant-ort01-[A-Za-z0-9_-]{30,}/ },
   { name: 'anthropic-api-key', re: /sk-ant-api03-[A-Za-z0-9_-]{30,}/ },
-  { name: 'generic-email', re: /\b[a-z0-9._%+-]+@(?!example\.com|users\.noreply\.github\.com)[a-z0-9.-]+\.[a-z]{2,}\b/i },
+  // RFC 2606 / IANA reserve example.com, example.net, example.org, and the
+  // .example TLD for placeholder use — skip those. Also skip the GitHub
+  // noreply domain (contributors legitimately use it).
+  { name: 'generic-email', re: /\b[a-z0-9._%+-]+@(?!example\.(com|net|org)\b|[a-z0-9.-]+\.example\b|users\.noreply\.github\.com\b)[a-z0-9.-]+\.[a-z]{2,}\b/i },
   { name: 'absolute-user-path', re: /[A-Z]:[\\/]Users[\\/](?!<[^>]+>|.{0,8}@|AppData[\\/])[A-Za-z][\w.-]{2,}/ },
   { name: 'uuid-nonzero', re: /\b(?!00000000-0000-0000-0000-)[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}\b/i },
 ];
@@ -38,6 +41,10 @@ const PATTERNS = [
 const TEXT_EXT = new Set(['.md', '.js', '.mjs', '.cjs', '.ts', '.ps1', '.cmd', '.bat', '.sh', '.py', '.json', '.yaml', '.yml', '.toml', '.html', '.css', '.txt']);
 
 let hits = 0;
+
+// docs/launch/ is launch-collateral (newsletter emails, submission URLs,
+// subreddit names) and intentionally contains public contact info.
+const SKIP_SUBPATHS = [path.join('docs', 'launch') + path.sep];
 
 function walk(dir) {
   for (const ent of fs.readdirSync(dir, { withFileTypes: true })) {
@@ -47,6 +54,8 @@ function walk(dir) {
       walk(abs);
     } else if (ent.isFile()) {
       if (SKIP_FILES.has(abs)) continue;
+      const rel = path.relative(REPO_ROOT, abs);
+      if (SKIP_SUBPATHS.some(sp => rel.startsWith(sp))) continue;
       const ext = path.extname(ent.name).toLowerCase();
       if (!TEXT_EXT.has(ext)) continue;
       scan(abs);

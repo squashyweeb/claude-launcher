@@ -19,7 +19,7 @@ $patterns = @(
     @{ name = 'anthropic-access-token';  re = 'sk-ant-oat01-[A-Za-z0-9_-]{30,}' },
     @{ name = 'anthropic-refresh-token'; re = 'sk-ant-ort01-[A-Za-z0-9_-]{30,}' },
     @{ name = 'anthropic-api-key';       re = 'sk-ant-api03-[A-Za-z0-9_-]{30,}' },
-    @{ name = 'generic-email';           re = '[a-z0-9._%+-]+@(?!example\.com|users\.noreply\.github\.com)[a-z0-9.-]+\.[a-z]{2,}' },
+    @{ name = 'generic-email';           re = '[a-z0-9._%+-]+@(?!example\.(com|net|org)\b|[a-z0-9.-]+\.example\b|users\.noreply\.github\.com\b)[a-z0-9.-]+\.[a-z]{2,}' },
     @{ name = 'absolute-user-path';      re = '[A-Z]:\\Users\\(?!<)[A-Za-z][\w.-]{2,}' },
     @{ name = 'uuid-nonzero';            re = '(?!00000000-0000-0000-0000-)[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}' }
 )
@@ -29,6 +29,8 @@ Write-Host "scanning $repo"
 Get-ChildItem $repo -Recurse -File | Where-Object {
     $skipHit = $false
     foreach ($d in $skipDirs) { if ($_.FullName -match [regex]::Escape("\\$d\\")) { $skipHit = $true; break } }
+    # docs/launch/ is launch-collateral (public submission channels)
+    if ($_.FullName -match [regex]::Escape("\docs\launch\")) { $skipHit = $true }
     (-not $skipHit) -and ($skipFiles -notcontains $_.FullName) -and ($textExt -contains $_.Extension.ToLower())
 } | ForEach-Object {
     $file = $_
