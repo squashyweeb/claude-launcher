@@ -10,7 +10,10 @@ $skipFiles = @(
     'scripts/check-pii.sh',
     '.gitleaks.toml',
     'CONTRIBUTING.md',
-    'SECURITY.md'
+    'SECURITY.md',
+    'package-lock.json',
+    'yarn.lock',
+    'pnpm-lock.yaml'
 ) | ForEach-Object { Join-Path $repo $_ }
 $patterns = @(
     @{ name = 'anthropic-access-token';  re = 'sk-ant-oat01-[A-Za-z0-9_-]{30,}' },

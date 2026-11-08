@@ -19,6 +19,11 @@ const SKIP_FILES = new Set([
   path.join(REPO_ROOT, '.gitleaks.toml'),
   path.join(REPO_ROOT, 'CONTRIBUTING.md'),
   path.join(REPO_ROOT, 'SECURITY.md'),
+  // Upstream dependency metadata (maintainer emails, SHA registry URLs).
+  // Public info; not in-scope for user-PII scanning.
+  path.join(REPO_ROOT, 'package-lock.json'),
+  path.join(REPO_ROOT, 'yarn.lock'),
+  path.join(REPO_ROOT, 'pnpm-lock.yaml'),
 ]);
 
 const PATTERNS = [
