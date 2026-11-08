@@ -1,92 +1,99 @@
 # Contributing to Claude Launcher
 
-Thanks for considering a contribution. This project is small by design
-and aims to stay that way, so most changes benefit from an issue first.
+Thanks for taking a look. A few things up front so we don't waste each
+other's time:
 
-## Table of contents
+## Scope
 
-- [Ground rules](#ground-rules)
-- [Dev setup](#dev-setup)
-- [What to work on](#what-to-work-on)
-- [Making a change](#making-a-change)
-- [Testing](#testing)
-- [Avoiding leaks](#avoiding-leaks)
-- [Commit style](#commit-style)
-- [Pull requests](#pull-requests)
+This project is a **wrapper around Claude Desktop**. It will not grow
+into:
 
----
+- A Claude client (don't talk to `/v1/messages` directly)
+- A proxy or router (don't share auth across accounts)
+- A rate-limit workaround (each profile is its own account, hits its
+  own limits)
+- A plugin / extension system (doubles maintenance for a user count
+  that doesn't justify it)
+- A telemetry collector (zero outbound traffic is a load-bearing trust
+  signal)
 
-## Ground rules
+Features in those directions will be closed with a thank-you. Features
+that make the wrapper nicer, more reliable, more accessible, or
+cross-platform are all fair game.
 
-1. **Treat the launcher as a utility, not a product.** It's a thin UI
-   around Claude Desktop's existing CLI flags. It should not grow a
-   plugin system, auto-updater, or anything that phones home.
-2. **Be kind.** See [CODE_OF_CONDUCT.md](CODE_OF_CONDUCT.md).
-3. **Protect your own accounts and other contributors' accounts.** See
-   [Avoiding leaks](#avoiding-leaks) below.
+## Maintainer realities (lazygit-style honesty)
+
+- **Solo maintainer, best-effort SLA.** First comment on a PR within
+  ~7 days. Occasional week-long silences during life.
+- **I will push back on features** that expand scope. "No" is the
+  default answer for anything in the scope list above.
+- **I won't merge PRs** that add npm dependencies without justification
+  in the PR body, change the trust boundary (telemetry, external
+  calls, token handling), or ship without matching docs.
+- **I will merge PRs** that fix bugs, add tests, improve accessibility,
+  tighten the PII scanner, make install easier, or add platform
+  support with real maintainer interest.
+
+If this isn't your style, that's genuinely fine — fork is encouraged.
 
 ## Dev setup
 
 ```bash
-git clone https://github.com/<owner>/claude-launcher
+git clone https://github.com/squashyweeb/claude-launcher
 cd claude-launcher
 npm install
 npm start
 ```
 
-The Electron app runs from source directly, no transpile step.
+For the PowerShell fallback:
 
-For the optional "Who is signed in?" feature:
+```powershell
+powershell -NoProfile -ExecutionPolicy Bypass -File legacy\launcher.ps1
+```
+
+For the Python `whois.py` helper:
 
 ```bash
 python -m pip install -r scripts/requirements.txt
 ```
 
-For the PowerShell fallback:
-
-```bash
-# No install needed; Windows PowerShell 5.1 ships with Windows.
-pwsh -NoProfile -ExecutionPolicy Bypass -File legacy\launcher.ps1
-```
-
 ## What to work on
 
-- Look at issues tagged `good first issue` and `help wanted`.
-- Items in [docs/09-roadmap.md](docs/09-roadmap.md) are documented and
-  deliberately not shipped — any of them is a reasonable PR topic.
-- Bug reports with repro steps are especially welcome. (Please redact
-  your real email and UUIDs from screenshots and logs.)
+- Issues tagged [`good first issue`](https://github.com/squashyweeb/claude-launcher/labels/good%20first%20issue)
+  (always 2-5 open, refilled as they close)
+- [`help wanted`](https://github.com/squashyweeb/claude-launcher/labels/help%20wanted)
+  for things the maintainer can't easily do (Mac/Linux ports, SignPath
+  cert, package-manager manifests)
+- Anything in [docs/09-roadmap.md](docs/09-roadmap.md) listed as Tier-2
+  (not in the "permanent no" pile)
 
-## Making a change
-
-1. Fork the repo, create a branch (`feat/<slug>` or `fix/<slug>`).
-2. Keep changes small and focused. A single PR should land one feature
-   or one bug, not a bundle.
-3. Avoid introducing new runtime dependencies if a few lines of code
-   would do. This project values a short npm tree.
-4. UI changes should keep the dark theme and the keyboard-first
-   interaction model.
+Not sure? Open a Discussion first.
 
 ## Testing
 
-- **Manual smoke test** before every PR:
-  1. Delete `profiles.json`, `prefs.json`, `config.json` from your
-     working copy (or move them aside).
-  2. `npm start` should bring up an empty window with the "+ Add
-     account" tile and no errors in DevTools (Ctrl+Shift+I).
-  3. Add a throwaway test account pointing at a scratch directory;
-     launch, close, right-click Edit, Remove.
-- **PowerShell fallback**: run `legacy\launcher.ps1` once with your
-  change and confirm it still opens.
-- **CI runs `check-pii` and lints on every push.**
+**Manual smoke before every PR:**
 
-## Avoiding leaks
+1. Delete your local `profiles.json` / `prefs.json` / `config.json`
+   (or move aside)
+2. `npm start` — empty-state tile shows, no DevTools errors
+   (`Ctrl+Shift+I`)
+3. Add a throwaway test account, launch, close, right-click Edit,
+   Remove
+4. If you touched `legacy/launcher.ps1`, run it once and confirm the
+   window opens
 
-The launcher sits next to sensitive data (OAuth tokens, cookies). This
-project asks every contributor to help keep that data out of the
-public repo.
+**CI runs on every push:**
 
-**Before every push:**
+- `node scripts/check-pii.js` — PII sentinel scan
+- `gitleaks` — secret scan
+- `node --check` on every JS file
+- PowerShell parse check on `legacy/launcher.ps1`
+- Python compile check on `scripts/whois.py`
+- Electron packager smoke build on Windows
+
+## Avoiding PII leaks
+
+Before every push:
 
 ```bash
 npm run check-pii
@@ -94,28 +101,25 @@ npm run check-pii
 
 **Never commit:**
 
-- Real email addresses (yours or anyone else's)
-- Real Anthropic account UUIDs or organization UUIDs
-- Any OAuth access/refresh token (`sk-ant-oat01-...` / `sk-ant-ort01-...`)
-- The MSIX publisher hash directory from your machine
-  (`claude_<hex>\`)
-- Absolute paths that reveal your Windows username
-  (`C:\Users\<you>\...`)
-- `profiles.json`, `prefs.json`, `config.json` (gitignored, but
+- Real email addresses (anyone's)
+- Real Anthropic account UUIDs
+- Any OAuth token (`sk-ant-oat01-*` / `sk-ant-ort01-*` / `sk-ant-api03-*`)
+- The MSIX publisher hash from your machine (`claude_<hex>\`)
+- Absolute paths with usernames (`C:\Users\<you>\…`)
+- `profiles.json` / `prefs.json` / `config.json` (gitignored, but
   double-check)
-- Any screenshot that shows the above in a status bar, dev-tools pane,
-  or address bar
+- Screenshots with the above visible in a status bar or dev-tools pane
 
-If a secret ends up in a commit:
+If a secret lands in a commit:
 
-1. Do **not** push.
-2. Rotate the token (sign out of Claude Desktop, sign back in — this
-   invalidates the leaked `sk-ant-ort01-...`).
+1. **Don't push.**
+2. Rotate: sign out of Claude Desktop, sign back in → invalidates any
+   leaked `sk-ant-ort01-*`.
 3. Rewrite history (`git reset --soft HEAD~1`, redo the commit).
-4. If you did push: open a private security advisory on GitHub and the
-   maintainers will coordinate rotation + a force-push.
+4. If you already pushed to a public remote: open a private Security
+   Advisory immediately; maintainer will coordinate a rotation window.
 
-See [SECURITY.md](SECURITY.md) for the full policy.
+See [SECURITY.md](SECURITY.md).
 
 ## Commit style
 
@@ -127,15 +131,30 @@ Conventional-commit prefixes keep history scannable:
 - `chore(deps): bump electron to 32.2.3`
 - `refactor(renderer): hoist swatch render out of modal boot`
 
-Keep the first line under 72 characters. Body (if any) explains the
-*why*.
+First line under 72 chars. Body explains the *why*.
 
 ## Pull requests
 
-- Fill in the PR template completely. The security checklist is not
-  optional.
-- Link the related issue if there is one.
-- Expect a maintainer to run the local smoke test on Windows before
-  merging.
-- CI must be green. If `check-pii` fails, read the output and fix the
+- Fill in the PR template completely (the security checklist is not
+  decorative)
+- Link the issue if there is one
+- Expect maintainer feedback within 7 days
+- CI must pass. If `check-pii` fails, read the output and fix the
   flagged file.
+
+## Platform ports (Mac / Linux)
+
+Yes, in principle. But: only merge a port when a contributor commits
+to maintaining it (the maintainer can't verify Mac/Linux bugs). Open
+a `help wanted` / port PR; include your availability for triage over
+the next 6 months. The core team (currently 1 person) won't take on
+a platform they can't run.
+
+## Questions
+
+- General: [GitHub Discussions](https://github.com/squashyweeb/claude-launcher/discussions)
+- Bugs / features: [Issues](https://github.com/squashyweeb/claude-launcher/issues/new/choose)
+- Security: [Private advisory](https://github.com/squashyweeb/claude-launcher/security/advisories/new)
+
+By contributing, you agree your contributions are licensed under the
+[MIT License](LICENSE).

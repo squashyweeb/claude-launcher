@@ -1,8 +1,8 @@
 blank_issues_enabled: false
 contact_links:
   - name: Security vulnerability
-    url: https://github.com/OWNER/claude-launcher/security/advisories/new
+    url: https://github.com/squashyweeb/claude-launcher/security/advisories/new
     about: Report security issues privately via GitHub Security Advisories.
-  - name: Discussion / Q&A
-    url: https://github.com/OWNER/claude-launcher/discussions
-    about: Open a discussion for general questions, usage help, or feature brainstorming.
+  - name: Question / discussion
+    url: https://github.com/squashyweeb/claude-launcher/discussions
+    about: Open a Discussion for general questions, usage help, or feature brainstorming.
